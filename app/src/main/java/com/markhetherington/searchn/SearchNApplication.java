@@ -7,6 +7,7 @@ import com.markhetherington.searchn.component.AppContextComponent;
 import com.markhetherington.searchn.component.ApplicationComponent;
 import com.markhetherington.searchn.component.DaggerAppContextComponent;
 import com.markhetherington.searchn.component.DaggerApplicationComponent;
+import com.markhetherington.searchn.module.ApiModule;
 import com.markhetherington.searchn.module.AppContextModule;
 
 public class SearchNApplication extends Application {
@@ -20,7 +21,9 @@ public class SearchNApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        AppContextComponent appContextComponent = DaggerAppContextComponent.builder().appContextModule(new AppContextModule(this)).build();
+        AppContextComponent appContextComponent = DaggerAppContextComponent.builder()
+                .appContextModule(new AppContextModule(this))
+                .apiModule(new ApiModule()).build();
         mAppComponent = DaggerApplicationComponent.builder().appContextComponent(appContextComponent).build();
     }
 

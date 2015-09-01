@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="Charcoal">#333333</color>
+    <color name="Pink">#ea4c89</color>
+    <color name="PinkDark">#ca2c69</color>
+    <color name="Green">#8aba56</color>
+    <color name="Pro">#ff8833</color>
+    <color name="Teams">#00b6e3</color>
+    <color name="Slate">#9ba5a8</color>
+</resources>

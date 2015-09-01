@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">SearchN</string>
     <string name="action_settings">Settings</string>
+    <string name="list">list</string>
+    <string name="grid">grid</string>
+    <string name="staggered">staggered</string>
 </resources>

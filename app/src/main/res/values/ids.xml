@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="layout_list" type="id"/>
+    <item name="layout_grid" type="id"/>
+    <item name="layout_staggered" type="id"/>
+</resources>
