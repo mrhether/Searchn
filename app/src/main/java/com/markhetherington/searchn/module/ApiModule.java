@@ -1,36 +1,41 @@
 package com.markhetherington.searchn.module;
 
-import android.support.annotation.NonNull;
-
-import com.markhetherington.searchn.SearchNApplication;
+import com.google.gson.GsonBuilder;
 import com.markhetherington.searchn.network.DribbbleService;
-
-import javax.inject.Singleton;
+import com.squareup.okhttp.OkHttpClient;
 
 import dagger.Module;
 import dagger.Provides;
-import retrofit.RestAdapter;
-import retrofit.client.Client;
-import retrofit.client.OkClient;
+import retrofit.Converter;
+import retrofit.GsonConverterFactory;
+import retrofit.Retrofit;
 
 @Module
 public class ApiModule {
 
     @Provides
-    public DribbbleService provideDribbleService(RestAdapter restAdapter) {
-        return restAdapter.create(DribbbleService.class);
+    public DribbbleService provideDribbleService(Retrofit retrofit) {
+        return retrofit.create(DribbbleService.class);
     }
 
     @Provides
-    public RestAdapter provideRestAdapter(Client client) {
-        return new RestAdapter.Builder()
-                .setClient(client)
-                .setEndpoint("https://api.dribbble.com/v1")
+    public Retrofit provideRestAdapter(OkHttpClient client, Converter.Factory converterFactory) {
+        return new Retrofit.Builder()
+                .baseUrl("https://api.dribbble.com/v1/")
+                .client(client)
+                .addConverterFactory(converterFactory)
                 .build();
     }
 
     @Provides
-    Client provideClient() {
-        return new OkClient();
+    OkHttpClient provideOkhttpClient() {
+        return new OkHttpClient();
+    }
+
+    @Provides
+    Converter.Factory provideConverterFactory() {
+        GsonBuilder builder = new GsonBuilder();
+        builder.excludeFieldsWithoutExposeAnnotation();
+        return GsonConverterFactory.create(builder.create());
     }
 }
