@@ -8,6 +8,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 
 import com.markhetherington.searchn.ui.RecyclerViewInfinteScrollListener;
 import com.markhetherington.searchn.ui.SpacesItemDecoration;
@@ -15,6 +16,7 @@ import com.markhetherington.searchn.adapter.ShotsAdapter;
 import com.markhetherington.searchn.network.DribbbleService;
 import com.markhetherington.searchn.network.model.Shot;
 
+import java.lang.ref.WeakReference;
 import java.util.List;
 
 import javax.inject.Inject;
@@ -22,8 +24,12 @@ import javax.inject.Inject;
 import butterknife.Bind;
 import butterknife.BindDimen;
 import butterknife.ButterKnife;
+import retrofit.Callback;
+import retrofit.Response;
 
-public class HomeActivity extends AppCompatActivity implements TabLayout.OnTabSelectedListener {
+public class HomeActivity extends AppCompatActivity implements TabLayout.OnTabSelectedListener, Callback<List<Shot>> {
+
+    private static final String TAG = HomeActivity.class.getSimpleName();
 
     @Inject SearchNApplication mApplication;
     @Inject DribbbleService mDribbbleService;
@@ -34,6 +40,7 @@ public class HomeActivity extends AppCompatActivity implements TabLayout.OnTabSe
 
     @BindDimen(R.dimen.activity_horizontal_margin) int mMargin;
 
+    private final RecyclerViewInfinteScrollListener mScrollListener = new HomeRecyclerViewInfinteScrollListener(this);
     private int mNextPage = 1;
 
     @Override
@@ -47,17 +54,7 @@ public class HomeActivity extends AppCompatActivity implements TabLayout.OnTabSe
         // Setup RecyclerView
         setListLayout();
         mRecyclerView.addItemDecoration(new SpacesItemDecoration(mMargin));
-        mRecyclerView.addOnScrollListener(new RecyclerViewInfinteScrollListener() {
-            @Override
-            public void shouldLoadMore() {
-                loadContent(new Runnable() {
-                    @Override
-                    public void run() {
-                        setCanLoadMore(true);
-                    }
-                });
-            }
-        });
+        mRecyclerView.addOnScrollListener(mScrollListener);
 
         // Setup Tabs
         mTabLayout.setOnTabSelectedListener(this);
@@ -69,7 +66,7 @@ public class HomeActivity extends AppCompatActivity implements TabLayout.OnTabSe
     @Override
     protected void onResume() {
         super.onResume();
-        loadContent(null);
+        loadContent();
     }
 
     private void setListLayout() {
@@ -87,37 +84,35 @@ public class HomeActivity extends AppCompatActivity implements TabLayout.OnTabSe
         mRecyclerView.setLayoutManager(layoutManager);
     }
 
-    private void loadContent(final Runnable runnable) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    //TODO: RxObserver or in a service
-                    final List<Shot> shots = mDribbbleService.animatedShots(mNextPage);
-                    runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (!HomeActivity.this.isDestroyed()) {
-                                if (mRecyclerView.getAdapter() instanceof ShotsAdapter) {
-                                    ((ShotsAdapter) mRecyclerView.getAdapter()).appendShots(shots);
-                                } else {
-                                    ShotsAdapter shotsAdapter = new ShotsAdapter(shots);
-                                    mRecyclerView.setAdapter(shotsAdapter);
-                                }
-                                mNextPage++;
-                                if (runnable != null) {
-                                    runnable.run();
-                                }
-                            }
-                        }
-                    });
-                } catch(Exception ignored) {
-                    //TODO: display error at the bottom of the list
-                }
-            }
-        }).start();
+    private void loadContent() {
+        mDribbbleService.animatedShots(mNextPage).enqueue(this);
     }
 
+    ////////////////////////////////////////////
+    // Callback<List<Shot>>
+    ////////////////////////////////////////////
+
+    @Override
+    public void onResponse(Response<List<Shot>> response) {
+        List<Shot> shots = response.body();
+
+        if (!HomeActivity.this.isDestroyed()) {
+            if (mRecyclerView.getAdapter() instanceof ShotsAdapter) {
+                ((ShotsAdapter) mRecyclerView.getAdapter()).appendShots(shots);
+            } else {
+                ShotsAdapter shotsAdapter = new ShotsAdapter(shots);
+                mRecyclerView.setAdapter(shotsAdapter);
+            }
+            mNextPage++;
+            mScrollListener.setCanLoadMore(true);
+        }
+    }
+
+    @Override
+    public void onFailure(Throwable t) {
+        // // TODO: 15-09-01 display error
+        Log.d(TAG, "Exception: \n" + t.toString());
+    }
 
     ////////////////////////////////////////////
     // TabLayout.OnTabSelectedListener
@@ -125,7 +120,7 @@ public class HomeActivity extends AppCompatActivity implements TabLayout.OnTabSe
 
     @Override
     public void onTabSelected(TabLayout.Tab mTab) {
-        switch ((int)mTab.getTag()) {
+        switch ((int) mTab.getTag()) {
             case R.id.layout_list:
                 setListLayout();
                 break;
@@ -144,6 +139,27 @@ public class HomeActivity extends AppCompatActivity implements TabLayout.OnTabSe
 
     @Override
     public void onTabReselected(TabLayout.Tab mTab) {
+    }
+
+    ////////////////////////////////////////////
+    // RecyclerViewInfinteScrollListener
+    ////////////////////////////////////////////
+
+    private static class HomeRecyclerViewInfinteScrollListener extends RecyclerViewInfinteScrollListener {
+
+        private WeakReference<HomeActivity> mActivity;
+
+        public HomeRecyclerViewInfinteScrollListener(HomeActivity activity) {
+            mActivity = new WeakReference<>(activity);
+        }
+
+        @Override
+        public void shouldLoadMore() {
+            HomeActivity homeActivity = mActivity.get();
+            if (homeActivity != null) {
+                homeActivity.loadContent();
+            }
+        }
     }
 
 }
